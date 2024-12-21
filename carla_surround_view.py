@@ -4,10 +4,12 @@ import numpy as np
 from utils.carla_utils import initialize_simulation, spawn_camera, carla_img_to_rgb_array, main_view_render
 from utils.surround_view import convert_bird_eye_view, blend_bird_eye_img
 
-display_width, display_height = 1920, 1080
+display_width, display_height = 1024, 768
 screen = pygame.display.set_mode((display_width, display_height),  pygame.HWSURFACE | pygame.DOUBLEBUF)
 
 camera_set = {'cam_1': np.array([]), 'cam_2': np.array([]), 'cam_3': np.array([]), 'cam_4': np.array([])}
+
+surr_cam_pitch_angle = -50
 
 def main_view_render_callback(img_inst):
     rgb_array = carla_img_to_rgb_array(img_inst)
@@ -31,10 +33,10 @@ def main():
 
     client, world, vehicle = initialize_simulation()
     main_view_camera = spawn_camera(world, vehicle, x_pos=-5, y_pos=0, z_pos=2.5, pitch=-10, yaw=0, fov=90)
-    cam_1 = spawn_camera(world, vehicle, x_pos=2.5, y_pos=0, z_pos=1, pitch=0, yaw=0, fov=128)  # front camera
-    cam_2 = spawn_camera(world, vehicle, x_pos=0, y_pos=-2, z_pos=1, pitch=0, yaw=-90, fov=128) # left camera
-    cam_3 = spawn_camera(world, vehicle, x_pos=0, y_pos=2, z_pos=1, pitch=0, yaw=90, fov=128)  # right camera
-    cam_4 = spawn_camera(world, vehicle, x_pos=-2.5, y_pos=0, z_pos=1, pitch=0, yaw=180, fov=128)  # rear camera
+    cam_1 = spawn_camera(world, vehicle, x_pos=2.4, y_pos=0, z_pos=1, pitch=surr_cam_pitch_angle, yaw=0, fov=128)  # front camera
+    cam_2 = spawn_camera(world, vehicle, x_pos=0, y_pos=-1, z_pos=1, pitch=surr_cam_pitch_angle, yaw=-90, fov=128) # left camera
+    cam_3 = spawn_camera(world, vehicle, x_pos=0, y_pos=1, z_pos=1, pitch=surr_cam_pitch_angle, yaw=90, fov=128)  # right camera
+    cam_4 = spawn_camera(world, vehicle, x_pos=-2.4, y_pos=0, z_pos=1, pitch=surr_cam_pitch_angle, yaw=180, fov=128)  # rear camera
 
     clock = pygame.time.Clock()
 
@@ -93,8 +95,7 @@ def main():
 
                 #cv2.imshow("video", total_cam_arr)
 
-                #if cv2.waitKey(1) & 0xFF == ord('q'):
-                #    break
+                #if cv2.waitKey(1) & 0xFF == ord('q'): break
 
                 for img in [front_cam_arr, left_cam_arr, right_cam_arr, rear_cam_arr]:
                     bird_eye_img_list.append(convert_bird_eye_view(img))
@@ -103,8 +104,7 @@ def main():
 
                 cv2.imshow("bev", result_img)
 
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                if cv2.waitKey(1) & 0xFF == ord('q'): break
 
             if keys_pressed[pygame.K_c]:
                 cv2.imwrite('save_img\\front_img.jpg', front_cam_arr)
