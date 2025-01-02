@@ -24,7 +24,8 @@ def convert_bird_eye_view(img):
                         [w * (0.5 - dst_w_ratio), h * dst_h_ratio]], dtype=np.float32)
 
     m = cv2.getPerspectiveTransform(src_pts, dst_pts)
-    dst_img = cv2.warpPerspective(src=img, M=m, dsize=(w, int(h*dst_h_ratio)), flags=cv2.INTER_LINEAR)
+    dst_img = cv2.warpPerspective(src=img, M=m, dsize=(w, int(h*dst_h_ratio)), flags=cv2.INTER_LINEAR,
+                                  borderValue=(0, 0, 0))
 
     return dst_img
 
