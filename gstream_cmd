@@ -1,0 +1,2 @@
+transiver: gst-launch-1.0 filesrc location=test.mp4 ! decodebin ! videoconvert ! nvh264enc preset=4 zerolatency=0 ! rtph264pay config-interval=1 pt=96 ! udpsink host=192.168.137.121 port=9999
+receiver: gst-launch-1.0 udpsrc port=9999 ! application/x-rtp, payload=96 ! rtpjitterbuffer latency=1 ! rtph264depay ! avdec_h264 ! videoconvert ! fpsdisplaysink text-overlay=true

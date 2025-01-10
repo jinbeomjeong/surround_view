@@ -1,11 +1,12 @@
 import cv2, imagezmq, threading
 import numpy as np
 
-from utils.surround_view import convert_bird_eye_view, blend_bird_eye_img
+from utils.surround_view import blend_bird_eye_img, convert_bird_eye_view_cuda
 
 image_hub = imagezmq.ImageHub()
 image_ready = False
 bird_eye_img_list = []
+gpu_img = cv2.cuda_GpuMat()
 
 front_cam_arr = np.empty(shape=(1080, 1920, 3), dtype=np.uint8)
 rear_cam_arr = np.empty(shape=(1080, 1920, 3), dtype=np.uint8)
@@ -30,7 +31,7 @@ def create_bird_eye_img():
         right_cam_arr = image[1080:2160, 1920:3840]
 
         for img in [front_cam_arr, left_cam_arr, right_cam_arr, rear_cam_arr]:
-            bird_eye_img_list.append(convert_bird_eye_view(img))
+            bird_eye_img_list.append(convert_bird_eye_view_cuda(gpu_img=gpu_img, img=img))
 
         raw_bird_eye_img = blend_bird_eye_img(*bird_eye_img_list)
 
@@ -45,6 +46,8 @@ bird_eye_img_task.start()
 while True:
     sender_name, image[:] = image_hub.recv_image()
     image_hub.send_reply(b'OK')
+
+    image[:] = cv2.imdecode(np.frombuffer(image, dtype=np.uint8), cv2.IMREAD_COLOR)
 
     cv2.imshow('video', result_img)
 

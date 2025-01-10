@@ -30,6 +30,37 @@ def convert_bird_eye_view(img):
     return dst_img
 
 
+def convert_bird_eye_view_cuda(gpu_img:cv2.cuda_GpuMat, img):
+    # 원본 이미지 크기 가져오기
+    h, w, c = img.shape
+
+    # 변환에 필요한 비율 계산
+    src_h_ratio = 0.08
+    src_w_ratio_offset = 0.104
+
+    dst_h_ratio = 0.6
+    dst_w_ratio = 0.0463
+
+    # 소스와 대상 좌표 설정
+    src_pts = np.array([[w * (0.5 - src_w_ratio_offset), h * src_h_ratio],
+                        [w * (0.5 + src_w_ratio_offset), h * src_h_ratio],
+                        [w, h], [0, h]], dtype=np.float32)
+    dst_pts = np.array([[w * 0.4, 0], [w * 0.6, 0], [w * (0.5 + dst_w_ratio), h * dst_h_ratio],
+                        [w * (0.5 - dst_w_ratio), h * dst_h_ratio]], dtype=np.float32)
+
+    # Perspective transformation matrix 계산
+    m = cv2.getPerspectiveTransform(src_pts, dst_pts)
+
+    # CUDA 가속을 위해 이미지를 GPU 메모리에 올리기
+    gpu_img.upload(img)
+
+    # CUDA 기반 warpPerspective 사용
+    dst_size = (w, int(h * dst_h_ratio))
+    gpu_dst_img = cv2.cuda.warpPerspective(gpu_img, m, dst_size, flags=cv2.INTER_LINEAR, borderValue=(0, 0, 0))
+
+    return gpu_dst_img.download()
+
+
 def blend_bird_eye_img(front_img, left_img, right_img, rear_img):
     blender.prepare(dst_roi)
 
