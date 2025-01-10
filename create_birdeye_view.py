@@ -44,10 +44,10 @@ bird_eye_img_task.start()
 
 
 while True:
-    sender_name, image[:] = image_hub.recv_image()
+    sender_name, compressed_img = image_hub.recv_image()
     image_hub.send_reply(b'OK')
 
-    image[:] = cv2.imdecode(np.frombuffer(image, dtype=np.uint8), cv2.IMREAD_COLOR)
+    image[:] = cv2.imdecode(np.frombuffer(compressed_img, dtype=np.uint8), cv2.IMREAD_COLOR)
 
     cv2.imshow('video', result_img)
 

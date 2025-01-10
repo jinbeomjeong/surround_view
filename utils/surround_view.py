@@ -51,12 +51,9 @@ def convert_bird_eye_view_cuda(gpu_img:cv2.cuda_GpuMat, img):
     # Perspective transformation matrix 계산
     m = cv2.getPerspectiveTransform(src_pts, dst_pts)
 
-    # CUDA 가속을 위해 이미지를 GPU 메모리에 올리기
-    gpu_img.upload(img)
-
     # CUDA 기반 warpPerspective 사용
     dst_size = (w, int(h * dst_h_ratio))
-    gpu_dst_img = cv2.cuda.warpPerspective(gpu_img, m, dst_size, flags=cv2.INTER_LINEAR, borderValue=(0, 0, 0))
+    gpu_dst_img = cv2.cuda.warpPerspective(gpu_img.upload(img), m, dst_size, flags=cv2.INTER_LINEAR, borderValue=(0, 0, 0))
 
     return gpu_dst_img.download()
 

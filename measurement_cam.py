@@ -6,7 +6,7 @@ from utils.carla_utils import initialize_simulation, spawn_camera, carla_img_to_
 
 display_width, display_height = 1920, 1080
 screen = pygame.display.set_mode((display_width, display_height),  pygame.HWSURFACE | pygame.DOUBLEBUF)
-img_sender = imagezmq.ImageSender(connect_to='tcp://192.168.137.7:5555')
+#img_sender = imagezmq.ImageSender(connect_to='tcp://192.168.137.7:5555')
 host_name = socket.gethostname()
 
 camera_set = {'cam_1': np.array([]), 'cam_2': np.array([]), 'cam_3': np.array([]), 'cam_4': np.array([])}
@@ -79,8 +79,9 @@ def main():
                 cam_left_rear = np.hstack([left_cam_arr, right_cam_arr])
                 total_cam_img[:] = np.vstack((cam_front_rear, cam_left_rear))
 
-                img_sender.send_image(msg=host_name, image= cv2.imencode('.jpg', total_cam_img, [cv2.IMWRITE_JPEG_QUALITY, 100]))
-                img_sender.zmq_socket.setsockopt(zmq.LINGER, 0)  # prevents ZMQ error on exit
+                _, compressed_img = cv2.imencode('.jpg', total_cam_img, [cv2.IMWRITE_JPEG_QUALITY, 100])
+                #img_sender.send_image(msg=host_name, image= compressed_img)
+                #img_sender.zmq_socket.setsockopt(zmq.LINGER, 0)  # prevents ZMQ error on exit
 
             if pressed_key[pygame.K_c]:
                 cv2.imwrite('save_img\\front_img.jpg', front_cam_arr)
