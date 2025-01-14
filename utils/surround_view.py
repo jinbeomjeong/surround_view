@@ -8,6 +8,7 @@ blender = cv2.detail_MultiBandBlender()
 blender.setNumBands(1)
 
 gpu_img = cv2.cuda_GpuMat()
+result_img = np.empty(shape=(w, w, 3), dtype=np.uint8)
 
 
 def convert_bird_eye_view(img):
@@ -185,7 +186,7 @@ def bottom_img_to_bird_eye_view_cuda(bottom_img: np.array):
     return gpu_dst_img.download(), gpu_dst_bin_img.download()
 
 
-def blend_bird_eye_img(front_img, left_img, right_img, rear_img):
+def blend_bird_eye_img_v1(front_img, left_img, right_img, rear_img):
     blender.prepare(dst_roi)
 
     left_img_rot = cv2.rotate(left_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -214,3 +215,35 @@ def blend_bird_eye_img(front_img, left_img, right_img, rear_img):
     result[result >= 255] = 255
 
     return result.astype(np.uint8)
+
+
+def blend_bird_eye_img_v2(front_img, left_img, right_img, rear_img):
+    left_img_rot = cv2.rotate(src=left_img, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
+    right_img_rot = cv2.rotate(src=right_img, rotateCode=cv2.ROTATE_90_CLOCKWISE)
+    rear_img_rot = cv2.rotate(src=rear_img, rotateCode=cv2.ROTATE_180)
+
+    gray = cv2.cvtColor(src=front_img, code=cv2.COLOR_BGR2GRAY)
+    _, front_img_mask = cv2.threshold(gray, thresh=1, maxval=255, type=cv2.THRESH_BINARY)
+
+    gray = cv2.cvtColor(src=left_img_rot, code=cv2.COLOR_BGR2GRAY)
+    _, left_img_mask = cv2.threshold(gray, thresh=1, maxval=255, type=cv2.THRESH_BINARY)
+
+    gray = cv2.cvtColor(src=right_img_rot, code=cv2.COLOR_BGR2GRAY)
+    _, right_img_mask = cv2.threshold(gray, thresh=1, maxval=255, type=cv2.THRESH_BINARY)
+
+    gray = cv2.cvtColor(src=rear_img_rot, code=cv2.COLOR_BGR2GRAY)
+    _, rear_img_mask = cv2.threshold(gray, thresh=1, maxval=255, type=cv2.THRESH_BINARY)
+
+    a = np.bitwise_and(front_img_mask, left_img_mask)
+    b = np.bitwise_and(front_img_mask, right_img_mask)
+    c = np.bitwise_and(rear_img_mask, left_img_mask)
+    d = np.bitwise_and(rear_img_mask, right_img_mask)
+
+    e = a + b + c + d
+
+    front_img[e == 255] = (0, 0, 0)
+    rear_img[e == 255] = (0, 0, 0)
+
+    result_img[:] = front_img + rear_img + left_img + right_img
+
+    return result_img
