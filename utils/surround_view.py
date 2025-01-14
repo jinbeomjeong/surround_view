@@ -222,16 +222,38 @@ def blend_bird_eye_img_v2(front_img, left_img, right_img, rear_img):
     right_img_rot = cv2.rotate(src=right_img, rotateCode=cv2.ROTATE_90_CLOCKWISE)
     rear_img_rot = cv2.rotate(src=rear_img, rotateCode=cv2.ROTATE_180)
 
-    gray = cv2.cvtColor(src=front_img, code=cv2.COLOR_BGR2GRAY)
+    front_img_top_offset = 170
+    left_img_left_offset = 260
+    right_img_right_offset = 260
+
+    border_color = (0, 0, 0)
+
+    front_ext = cv2.copyMakeBorder(front_img, front_img_top_offset, 1920 - (front_img.shape[0] + front_img_top_offset),
+                                   0, 0,
+                                   cv2.BORDER_CONSTANT, value=border_color)
+
+    rear_ext = cv2.copyMakeBorder(rear_img_rot, 1920 - (rear_img.shape[0] + front_img_top_offset), front_img_top_offset,
+                                  0, 0,
+                                  cv2.BORDER_CONSTANT, value=border_color)
+
+    left_ext = cv2.copyMakeBorder(left_img_rot, 0, 0, left_img_left_offset,
+                                  1920 - (left_img_rot.shape[1] + left_img_left_offset),
+                                  cv2.BORDER_CONSTANT, value=border_color)
+
+    right_ext = cv2.copyMakeBorder(right_img_rot, 0, 0, 1920 - (right_img_rot.shape[1] + right_img_right_offset),
+                                   right_img_right_offset,
+                                   cv2.BORDER_CONSTANT, value=border_color)
+
+    gray = cv2.cvtColor(src=front_ext, code=cv2.COLOR_BGR2GRAY)
     _, front_img_mask = cv2.threshold(gray, thresh=1, maxval=255, type=cv2.THRESH_BINARY)
 
-    gray = cv2.cvtColor(src=left_img_rot, code=cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(src=left_ext, code=cv2.COLOR_BGR2GRAY)
     _, left_img_mask = cv2.threshold(gray, thresh=1, maxval=255, type=cv2.THRESH_BINARY)
 
-    gray = cv2.cvtColor(src=right_img_rot, code=cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(src=right_ext, code=cv2.COLOR_BGR2GRAY)
     _, right_img_mask = cv2.threshold(gray, thresh=1, maxval=255, type=cv2.THRESH_BINARY)
 
-    gray = cv2.cvtColor(src=rear_img_rot, code=cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(src=rear_ext, code=cv2.COLOR_BGR2GRAY)
     _, rear_img_mask = cv2.threshold(gray, thresh=1, maxval=255, type=cv2.THRESH_BINARY)
 
     a = np.bitwise_and(front_img_mask, left_img_mask)
@@ -241,9 +263,9 @@ def blend_bird_eye_img_v2(front_img, left_img, right_img, rear_img):
 
     e = a + b + c + d
 
-    front_img[e == 255] = (0, 0, 0)
-    rear_img[e == 255] = (0, 0, 0)
+    front_ext[e == 255] = (0, 0, 0)
+    rear_ext[e == 255] = (0, 0, 0)
 
-    result_img[:] = front_img + rear_img + left_img + right_img
+    result_img[:] = front_ext + rear_ext + left_ext + right_ext
 
     return result_img
