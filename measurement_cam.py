@@ -1,4 +1,4 @@
-import carla, pygame, cv2, imagezmq, socket, zmq
+import carla, pygame, cv2, imagezmq, socket
 import numpy as np
 
 from utils.carla_utils import initialize_simulation, spawn_camera, carla_img_to_rgb_array, main_view_render, ego_vehicle_manual_control
@@ -7,8 +7,6 @@ from utils.carla_utils import initialize_simulation, spawn_camera, carla_img_to_
 display_width, display_height = 1920, 1080
 screen = pygame.display.set_mode((display_width, display_height),  pygame.HWSURFACE | pygame.DOUBLEBUF)
 img_sender = imagezmq.ImageSender(connect_to='tcp://192.168.137.7:5555')
-
-host_name = socket.gethostname()
 
 camera_set = {'cam_1': np.array([]), 'cam_2': np.array([]), 'cam_3': np.array([]), 'cam_4': np.array([])}
 
@@ -56,8 +54,6 @@ def main():
 
     try:
         while True:
-            bird_eye_img_list = []
-
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return
@@ -76,13 +72,19 @@ def main():
 
             if np.all([front_cam_arr.shape[0] > 0, left_cam_arr.shape[0] > 0,
                        right_cam_arr.shape[0] > 0, rear_cam_arr.shape[0] > 0]):
-                cam_front_rear = np.hstack([front_cam_arr, rear_cam_arr])
-                cam_left_rear = np.hstack([left_cam_arr, right_cam_arr])
-                total_cam_img[:] = np.vstack((cam_front_rear, cam_left_rear))
+                #cam_front_rear = np.hstack([front_cam_arr, rear_cam_arr])
+                #cam_left_rear = np.hstack([left_cam_arr, right_cam_arr])
+                #total_cam_img[:] = np.vstack((cam_front_rear, cam_left_rear))
 
-                _, compressed_img = cv2.imencode('.jpg', total_cam_img, [cv2.IMWRITE_JPEG_QUALITY, 100])
-                img_sender.send_image(msg=host_name, image= compressed_img)
-                #img_sender.zmq_socket.setsockopt(zmq.LINGER, 0)  # prevents ZMQ error on exit
+                comp_front_img = cv2.imencode('.jpg', front_cam_arr, [cv2.IMWRITE_JPEG_QUALITY, 100])[1]
+                comp_left_img = cv2.imencode('.jpg', left_cam_arr, [cv2.IMWRITE_JPEG_QUALITY, 100])[1]
+                comp_right_img = cv2.imencode('.jpg', right_cam_arr, [cv2.IMWRITE_JPEG_QUALITY, 100])[1]
+                comp_rear_img = cv2.imencode('.jpg', rear_cam_arr, [cv2.IMWRITE_JPEG_QUALITY, 100])[1]
+
+                img_sender.send_image(msg='front', image=comp_front_img)
+                img_sender.send_image(msg='rear', image=comp_rear_img)
+                img_sender.send_image(msg='left', image=comp_left_img)
+                img_sender.send_image(msg='right', image=comp_right_img)
 
             if pressed_key[pygame.K_c]:
                 cv2.imwrite('save_img\\front_img.jpg', front_cam_arr)
