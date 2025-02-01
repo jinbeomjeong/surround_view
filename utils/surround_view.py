@@ -1,4 +1,4 @@
-import cv2
+import cv2, screeninfo
 import numpy as np
 
 
@@ -9,6 +9,21 @@ blender.setNumBands(1)
 
 gpu_img = cv2.cuda_GpuMat()
 result_img = np.empty(shape=(w, w, 3), dtype=np.uint8)
+
+
+def get_screen_resolution():
+    screen = screeninfo.get_monitors()[0]  # 첫 번째 모니터 기준
+    return screen.width, screen.height
+
+
+def resize_to_fit_display(image, display_width, display_height):
+    h, w = image.shape[:2]
+    scale = min(display_width / w, display_height / h)  # 비율 유지
+    new_width = int(w * scale)
+    new_height = int(h * scale)
+    resized_image = cv2.resize(src=image, dsize=(new_width, new_height), interpolation=cv2.INTER_AREA)
+
+    return resized_image
 
 
 def convert_bird_eye_view(img):
@@ -186,7 +201,7 @@ def bottom_img_to_bird_eye_view_cuda(bottom_img: np.array):
     return gpu_dst_img.download(), gpu_dst_bin_img.download()
 
 
-def blend_bird_eye_img_v1(front_img, left_img, right_img, rear_img):
+def blend_bird_eye_img_v2(front_img, left_img, right_img, rear_img):
     blender.prepare(dst_roi)
 
     left_img_rot = cv2.rotate(left_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -217,7 +232,7 @@ def blend_bird_eye_img_v1(front_img, left_img, right_img, rear_img):
     return result.astype(np.uint8)
 
 
-def blend_bird_eye_img_v2(front_img, left_img, right_img, rear_img):
+def blend_bird_eye_img_v1(front_img, left_img, right_img, rear_img):
     left_img_rot = cv2.rotate(src=left_img, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
     right_img_rot = cv2.rotate(src=right_img, rotateCode=cv2.ROTATE_90_CLOCKWISE)
     rear_img_rot = cv2.rotate(src=rear_img, rotateCode=cv2.ROTATE_180)

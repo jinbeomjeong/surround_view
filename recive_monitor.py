@@ -1,41 +1,46 @@
-import imagezmq, cv2, screeninfo
+import imagezmq, cv2, threading, torch
 import numpy as np
-
-from nvjpeg import NvJpeg
-
-def get_screen_resolution():
-    screen = screeninfo.get_monitors()[0]  # 첫 번째 모니터 기준
-    return screen.width, screen.height
+from utils.surround_view import get_screen_resolution, resize_to_fit_display
+from torchvision.io import decode_jpeg, ImageReadMode
 
 
-def resize_to_fit_display(image, display_width, display_height):
-    h, w = image.shape[:2]
-    scale = min(display_width / w, display_height / h)  # 비율 유지
-    new_width = int(w * scale)
-    new_height = int(h * scale)
-    resized_image = cv2.resize(src=image, dsize=(new_width, new_height), interpolation=cv2.INTER_AREA)
-
-    return resized_image
+stop_event = threading.Event()
+jpg_bytearr = None
+jpg_data_ready = False
 
 
-image_hub = imagezmq.ImageHub()
-nv_jpeg = NvJpeg()
-cv2.namedWindow(winname="img", flags=cv2.WINDOW_NORMAL)
-display_width, display_height = get_screen_resolution()
+def receive_image():
+    global jpg_bytearr, jpg_data_ready
+
+    image_hub = imagezmq.ImageHub()
+
+    while not stop_event.is_set():
+        name, jpg_bytestring = image_hub.recv_jpg()
+        jpg_bytearr = np.frombuffer(jpg_bytestring, dtype=np.uint8)
+        image_hub.send_reply(b'OK')
+        jpg_data_ready = True
+
+    image_hub.close()
 
 
-while True:
-    sender_name, compressed_img = image_hub.recv_image()
-    image_hub.send_reply(b'OK')
+if __name__ == "__main__":
+    display_width, display_height = get_screen_resolution()
+    cv2.namedWindow(winname="img", flags=cv2.WINDOW_NORMAL)
 
-    raw_img = nv_jpeg.decode(compressed_img)  # for Nvidia JPEG decoding
-    # raw_img = cv2.imdecode(np.frombuffer(compressed_img, dtype=np.uint8), cv2.IMREAD_COLOR)  # for jpeg-turbo of opencv decoding
-    resized_img = resize_to_fit_display(raw_img, display_width, display_height)
+    receive_img_thread = threading.Thread(target=receive_image)
+    receive_img_thread.start()
 
-    cv2.imshow(winname='img', mat=resized_img)
+    while True:
+        raw_img = decode_jpeg(torch.from_numpy(jpg_bytearr), mode=ImageReadMode.RGB, device='CPU')  # for nvidia JPEG decoding of x86-64 platform
+        # raw_img = nv_jpeg.decode(compressed_img)  # for nvidia JPEG decoding of jetson
+        # raw_img = cv2.imdecode(np.frombuffer(compressed_img, dtype=np.uint8), cv2.IMREAD_COLOR)  # for jpeg-turbo of opencv decoding
+        resized_img = resize_to_fit_display(raw_img, display_width, display_height)
 
-    if cv2.waitKey(1) == 'q':  # Exit on pressing 'ESC'
-        break
+        cv2.imshow(winname='img', mat=resized_img)
 
-image_hub.close()
-cv2.destroyAllWindows()
+        if cv2.waitKey(1) == 'q':  # Exit on pressing 'ESC'
+            break
+
+    stop_event.set()
+    receive_img_thread.join()
+    cv2.destroyAllWindows()
