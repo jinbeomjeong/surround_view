@@ -125,3 +125,7 @@ dmypy.json
 
 # pycharm enviroment
 .idea
+
+# cmake build files
+deploy/cmake-build-debug
+deploy/cmake-build-release
