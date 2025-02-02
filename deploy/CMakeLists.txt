@@ -7,9 +7,9 @@ set(OpenCV_DIR C:/Users/JinBe/Downloads/opencv-4.11.0/build/install)
 
 find_package(OpenCV REQUIRED)
 
-include_directories(deploy ${OpenCV_DIR}/include)
+include_directories(${OpenCV_DIR}/include)
 
-add_executable(deploy main.cpp)
+add_executable(deploy main.cpp utils/surround_view.cpp)
 
 target_link_libraries(deploy ${OpenCV_LIBRARIES})
 
