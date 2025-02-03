@@ -33,7 +33,8 @@ if __name__ == "__main__":
 
     for i in itertools.count() :
         if jpg_data_ready:
-            raw_img = decode_jpeg(torch.from_numpy(jpg_bytearr), mode=ImageReadMode.RGB, device='CPU').numpy()  # for nvidia JPEG decoding of x86-64 platform
+            raw_img = decode_jpeg(torch.from_numpy(jpg_bytearr), mode=ImageReadMode.UNCHANGED, device='cuda')  # for nvidia JPEG decoding of x86-64 platform
+            raw_img = raw_img.permute(1, 2, 0).cpu().numpy()  # convert to numpy array
             # raw_img = nv_jpeg.decode(compressed_img)  # for nvidia JPEG decoding of jetson
             # raw_img = cv2.imdecode(np.frombuffer(compressed_img, dtype=np.uint8), cv2.IMREAD_COLOR)  # for jpeg-turbo of opencv decoding
             resized_img = resize_to_fit_display(raw_img, display_width, display_height)
@@ -43,7 +44,7 @@ if __name__ == "__main__":
             if img_save_flag:
                 cv2.imwrite(f'save_img\\output_{i}.jpg', raw_img)
 
-            if cv2.waitKey(1) == 'q':  # Exit on pressing 'ESC'
+            if cv2.waitKey(1) == 'q':
                 break
 
     stop_event.set()
