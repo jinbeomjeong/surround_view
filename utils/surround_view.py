@@ -284,3 +284,40 @@ def blend_bird_eye_img_v1(front_img, left_img, right_img, rear_img):
     result_img[:] = front_ext + rear_ext + left_ext + right_ext
 
     return result_img
+
+def blend_bird_eye_img_fisheye(front_img, rear_img, left_img, right_img):
+    left_img = cv2.resize(left_img, fx=0.50, fy=0.55, dsize=(0, 0), interpolation=cv2.INTER_AREA)
+    right_img = cv2.resize(right_img, fx=0.50, fy=0.55, dsize=(0, 0), interpolation=cv2.INTER_AREA)
+    rear_img = cv2.resize(rear_img, fx=0.7, fy=1, dsize=(0, 0), interpolation=cv2.INTER_AREA)
+
+    left_img_rot = cv2.rotate(src=left_img, rotateCode=cv2.ROTATE_90_COUNTERCLOCKWISE)
+    right_img_rot = cv2.rotate(src=right_img, rotateCode=cv2.ROTATE_90_CLOCKWISE)
+    rear_img_rot = cv2.rotate(src=rear_img, rotateCode=cv2.ROTATE_180)
+
+    top_offset = 100
+    left_offset = 500
+    right_offset = left_offset
+
+    border_color = (0, 0, 0)
+
+    img_size = 2000
+
+    front_img_h_offset = int((img_size - (front_img.shape[1])) / 2)
+    rear_img_h_offset = int((img_size - (rear_img_rot.shape[1])) / 2)
+    horizontal_img_v_offset = int((img_size - (left_img_rot.shape[0])) / 2)
+
+    front_ext = cv2.copyMakeBorder(front_img, top_offset, img_size - front_img.shape[0] - top_offset,
+                                   front_img_h_offset, front_img_h_offset, cv2.BORDER_CONSTANT, value=border_color)
+
+    rear_ext = cv2.copyMakeBorder(rear_img_rot, img_size - rear_img_rot.shape[0] - top_offset, top_offset,
+                                  rear_img_h_offset, rear_img_h_offset, cv2.BORDER_CONSTANT, value=border_color)
+
+    left_ext = cv2.copyMakeBorder(left_img_rot, horizontal_img_v_offset, horizontal_img_v_offset, left_offset,
+                                  img_size - left_img_rot.shape[1] - left_offset, cv2.BORDER_CONSTANT,
+                                  value=border_color)
+
+    right_ext = cv2.copyMakeBorder(right_img_rot, horizontal_img_v_offset, horizontal_img_v_offset,
+                                   img_size - right_img_rot.shape[1] - right_offset, right_offset, cv2.BORDER_CONSTANT,
+                                   value=border_color)
+
+    return front_ext+rear_ext+left_ext+right_ext

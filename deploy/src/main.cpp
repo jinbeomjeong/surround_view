@@ -1,5 +1,7 @@
 #include <opencv2/opencv.hpp>
+#include <thread>
 #include "surround_view.h"
+
 
 int main() {
     cv::String const win_name = "windows";
@@ -13,7 +15,7 @@ int main() {
 
     const int img_width = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_WIDTH));
     const int img_height = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_HEIGHT));
-    const int desired_frame_time_ms = 33; // ì•½ 30FPS (1000ms / 30)
+    const int desired_frame_time_ms = 33; // ¾à 30FPS (1000ms / 30)
 
     cv::namedWindow(win_name, cv::WINDOW_NORMAL);
 
@@ -23,10 +25,10 @@ int main() {
         auto frame_start = std::chrono::steady_clock::now();
         cap >> frame;
 
-        if (frame.empty()) break; // í”„ë ˆì„ì´ ë¹„ì–´ìˆìœ¼ë©´ ì¢…ë£Œ
+        if (frame.empty()) break; // ÇÁ·¹ÀÓÀÌ ºñ¾îÀÖÀ¸¸é Á¾·á
 
         cv::Mat dst_img_1 = transform.transform(frame);
-        cv::Mat dst_img_2 = transform.transform(frame); // ë³µì‚¬
+        cv::Mat dst_img_2 = transform.transform(frame); // º¹»ç
         cv::Mat dst_img_3 = transform.transform(frame);
         cv::Mat dst_img_4 = transform.transform(frame);
 
