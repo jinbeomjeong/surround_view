@@ -1,0 +1,72 @@
+# nvdspreprocess configuration for MEI fisheye undistortion (in-place)
+#
+# network-color-format=0 (RGB) → nvdspreprocess allocates RGBA scaling pool
+# (NvDsPreProcessFormat_RGB maps to NVBUF_COLOR_FORMAT_RGBA in NvBufSurface)
+# This matches our nvstreammux RGBA NVMM input perfectly.
+#
+# CustomTransformation() overwrites in_surf in-place with undistorted frames
+# so nvmultistreamtiler → nveglglessink shows the undistorted output.
+
+[property]
+enable=1
+target-unique-ids=1
+unique-id=5
+gpu-id=0
+
+# 1 = process on full frames (not object crops)
+process-on-frame=1
+
+# Processing size == source size (1:1, no resize needed for in-place)
+processing-width=1400
+processing-height=1400
+maintain-aspect-ratio=0
+symmetric-padding=0
+
+# Buffer pool sizes
+scaling-buf-pool-size=6
+tensor-buf-pool-size=6
+
+# Memory type: 2 = NVBUF_MEM_CUDA_DEVICE (NVMM, no CPU copy)
+scaling-pool-memory-type=2
+
+# Compute: 0 = Default (GPU on dGPU)
+scaling-pool-compute-hw=0
+
+# Interpolation: 0 = Nearest (unused; we do our own remap)
+scaling-filter=0
+
+# Tensor description
+# network-input-order: 1 = NHWC
+network-input-order=1
+# N;H;W;C
+network-input-shape=2;1400;1400;4
+# 0 = RGB  (→ RGBA internal NvBufSurface, matched to nvstreammux RGBA)
+network-color-format=0
+# 0 = FP32
+tensor-data-type=0
+tensor-name=undistort_out
+
+# Custom library
+custom-lib-path=/home/jinbeom/workspace/surround_view/nvds_undistort/libmei_undistort.so
+custom-tensor-preparation-function=CustomTensorPreparation
+
+[user-configs]
+num-cameras=2
+src-w=1400
+src-h=1400
+dst-w=1400
+dst-h=1400
+cam-0-map-x=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_0_map_x.bin
+cam-0-map-y=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_0_map_y.bin
+cam-1-map-x=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_1_map_x.bin
+cam-1-map-y=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_1_map_y.bin
+
+# group-0: full-frame undistortion for both camera streams.
+# process-on-roi=0  → process the whole frame (no ROI crop).
+# custom-input-transformation-function → calls CustomAsyncTransformation()
+#   which modifies in_surf in-place for display and fills out_surf for tensor.
+[group-0]
+src-ids=0;1
+custom-input-transformation-function=CustomAsyncTransformation
+process-on-roi=0
+draw-roi=0
