@@ -23,8 +23,8 @@ maintain-aspect-ratio=0
 symmetric-padding=0
 
 # Buffer pool sizes
-scaling-buf-pool-size=6
-tensor-buf-pool-size=6
+scaling-buf-pool-size=8
+tensor-buf-pool-size=8
 
 # Memory type: 2 = NVBUF_MEM_CUDA_DEVICE (NVMM, no CPU copy)
 scaling-pool-memory-type=2
@@ -56,10 +56,10 @@ src-w=1400
 src-h=1400
 dst-w=1400
 dst-h=1400
-cam-0-map-x=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_0_map_x.bin
-cam-0-map-y=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_0_map_y.bin
-cam-1-map-x=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_1_map_x.bin
-cam-1-map-y=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_1_map_y.bin
+cam-0-map-x=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_0_mei_undistort_map_x.bin
+cam-0-map-y=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_0_mei_undistort_map_y.bin
+cam-1-map-x=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_1_mei_undistort_map_x.bin
+cam-1-map-y=/home/jinbeom/workspace/surround_view/nvds_undistort/maps/cam_1_mei_undistort_map_y.bin
 
 # group-0: full-frame undistortion for both camera streams.
 # process-on-roi=0  → process the whole frame (no ROI crop).

@@ -24,7 +24,7 @@ LDFLAGS     := \
   -shared -Xlinker -soname=libmei_undistort.so
 
 TARGET      := libmei_undistort.so
-SRC         := mei_undistort_lib.cu
+SRC         := remap_lib.cu
 
 all: $(TARGET)
 
@@ -32,8 +32,8 @@ $(TARGET): $(SRC)
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) $(LDFLAGS) -o $@ $<
 	@echo "Built: $(TARGET)"
 
-maps: save_maps.py
-	cd .. && source venv/bin/activate && python nvds_undistort/save_maps.py
+maps: save_mei_undistort_maps.py
+	cd .. && venv/bin/python nvds_undistort/save_mei_undistort_maps.py
 
 clean:
 	rm -f $(TARGET)

@@ -1,0 +1,52 @@
+# nvdspreprocess configuration — pure IPM remap only (1400x1400 -> 1400x1400).
+#
+# This config is for bev.py, where the
+# undistorted 1400x1400 frame is fed directly into IPM without resizing.
+# The 800x800 BEV is placed centered in the 1400x1400 output canvas
+# (offset ox=300, oy=300). Post-processing is handled downstream:
+#   src-crop "0:1000:1400:400"  -> 1400x400
+#   flip-method={1,3}           -> per-camera rotate 90deg -> 400x1400
+
+[property]
+enable=1
+target-unique-ids=1
+unique-id=7
+gpu-id=0
+
+process-on-frame=1
+processing-width=1400
+processing-height=1400
+maintain-aspect-ratio=0
+symmetric-padding=0
+
+scaling-buf-pool-size=8
+tensor-buf-pool-size=8
+scaling-pool-memory-type=2
+scaling-pool-compute-hw=0
+scaling-filter=0
+
+network-input-order=1
+network-input-shape=2;1400;1400;4
+network-color-format=0
+tensor-data-type=0
+tensor-name=ipm_bev_1400_out_chained
+
+custom-lib-path=/home/jinbeom/workspace/surround_view/nvds_undistort/libmei_ipm.so
+custom-tensor-preparation-function=CustomTensorPreparation
+
+[user-configs]
+num-cameras=2
+src-w=1400
+src-h=1400
+dst-w=1400
+dst-h=1400
+cam-0-map-x=/home/jinbeom/workspace/surround_view/nvds_ipm/maps/cam_0_ipm_bev_x.bin
+cam-0-map-y=/home/jinbeom/workspace/surround_view/nvds_ipm/maps/cam_0_ipm_bev_y.bin
+cam-1-map-x=/home/jinbeom/workspace/surround_view/nvds_ipm/maps/cam_1_ipm_bev_x.bin
+cam-1-map-y=/home/jinbeom/workspace/surround_view/nvds_ipm/maps/cam_1_ipm_bev_y.bin
+
+[group-0]
+src-ids=0;1
+custom-input-transformation-function=CustomAsyncTransformation
+process-on-roi=0
+draw-roi=0

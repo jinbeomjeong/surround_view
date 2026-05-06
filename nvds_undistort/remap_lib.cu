@@ -1,5 +1,5 @@
 /*
- * mei_undistort_lib.cu  –  nvdspreprocess custom library
+ * remap_lib.cu  –  nvdspreprocess custom remap library
  *
  * MEI fisheye undistortion using nppiRemap directly on NvBufSurface
  * CUDA device pointers (NVMM) — zero CPU↔GPU transfer per frame.
@@ -13,9 +13,8 @@
  * Per-frame data path:
  *   1. cudaMemcpy  in_surf[i].dataPtr → d_tmp[cam]   (save original)
  *   2. nppiRemap   d_tmp[cam]         → in_surf[i].dataPtr  (display)
- *   3. cudaMemcpy  in_surf[i].dataPtr → out_surf[i].dataPtr (tensor)
  *
- * All three steps are GPU-only (NVMM pointers throughout).
+ * Both per-frame steps are GPU-only (NVMM pointers throughout).
  *
  * Exported symbols required by nvdspreprocess:
  *   initLib / deInitLib / CustomTransformation /
@@ -201,18 +200,17 @@ void deInitLib(CustomCtx* ctx)
  * in_surf  : batched RGBA NVMM frames from nvstreammux (src_w × src_h)
  *            → also flows downstream to nvmultistreamtiler / nveglglessink
  * out_surf : pre-allocated NVMM surfaces at dst size (tensor buffer)
- *            → consumed internally by nvdspreprocess / nvinfer
+ *            → unused in this display-only pipeline
  *
  * We modify in_surf in-place so the DISPLAY path shows undistorted frames.
  *
  * Per-surface steps:
  *   1. d_tmp  ← in_surf[i].dataPtr          (save original, GPU-to-GPU)
  *   2. in_surf[i].dataPtr ← nppiRemap(d_tmp) (undistort for display)
- *   3. out_surf[i].dataPtr ← in_surf[i].dataPtr (propagate to tensor)
  */
 extern "C"
 NvDsPreProcessStatus CustomTransformation(NvBufSurface*         in_surf,
-                                           NvBufSurface*         out_surf,
+                                           NvBufSurface*         /*out_surf*/,
                                            CustomTransformParams& /*params*/)
 {
     if (!g_ctx) {
@@ -223,8 +221,7 @@ NvDsPreProcessStatus CustomTransformation(NvBufSurface*         in_surf,
     const int num_cams = (int)g_ctx->cam_maps.size();
 
     for (uint32_t i = 0; i < in_surf->numFilled; ++i) {
-        NvBufSurfaceParams& inp  = in_surf->surfaceList[i];
-        NvBufSurfaceParams& outp = out_surf->surfaceList[i];
+        NvBufSurfaceParams& inp = in_surf->surfaceList[i];
         CamMaps& maps = g_ctx->cam_maps[i % num_cams];
 
         const int row_bytes = (int)inp.width * 4;  // tight stride for d_tmp
@@ -237,11 +234,24 @@ NvDsPreProcessStatus CustomTransformation(NvBufSurface*         in_surf,
             row_bytes,    (int)inp.height,     // copy width, rows
             cudaMemcpyDeviceToDevice, g_ctx->stream);
 
-        // ── Step 2: nppiRemap  d_tmp → in_surf  (display path) ──
+        // ── Step 2: clear destination, then nppiRemap d_tmp → in_surf ──
+        // nppiRemap does not guarantee writes for invalid map coordinates.
+        // Clear first so out-of-map IPM/undistort regions become black.
         {
             NppiSize src_size = { (int)inp.width,  (int)inp.height };
             NppiRect src_roi  = { 0, 0, (int)inp.width, (int)inp.height };
             NppiSize dst_size = { maps.dst_w, maps.dst_h };
+
+            cudaError_t ce = cudaMemset2DAsync(
+                inp.dataPtr, (size_t)inp.pitch,
+                0,
+                (size_t)maps.dst_w * 4, (size_t)maps.dst_h,
+                g_ctx->stream);
+            if (ce != cudaSuccess) {
+                LOG("cudaMemset2DAsync failed surface %u: %s",
+                    i, cudaGetErrorString(ce));
+                return NVDSPREPROCESS_CUDA_ERROR;
+            }
 
             NppStatus st = nppiRemap_8u_C4R_Ctx(
                 (const Npp8u*)maps.d_tmp, src_size,
@@ -250,7 +260,7 @@ NvDsPreProcessStatus CustomTransformation(NvBufSurface*         in_surf,
                 maps.d_map_y, maps.dst_w * (int)sizeof(float),
                 (Npp8u*)inp.dataPtr,      (int)inp.pitch,
                 dst_size,
-                NPPI_INTER_LINEAR,
+                NPPI_INTER_CUBIC,
                 g_ctx->npp_ctx
             );
             if (st != NPP_SUCCESS) {
@@ -259,12 +269,6 @@ NvDsPreProcessStatus CustomTransformation(NvBufSurface*         in_surf,
             }
         }
 
-        // ── Step 3: in_surf (undistorted) → out_surf  (tensor path) ──
-        cudaMemcpy2DAsync(
-            outp.dataPtr, (int)outp.pitch,     // dst (tensor pool)
-            inp.dataPtr,  (int)inp.pitch,       // src (now undistorted)
-            (int)outp.width * 4, (int)outp.height,
-            cudaMemcpyDeviceToDevice, g_ctx->stream);
     }
 
     if (cudaStreamSynchronize(g_ctx->stream) != cudaSuccess)
